@@ -1,9 +1,11 @@
 import express from 'express';
 import bodyParser from 'body-parser';
+import timetableRoutes from './routes/timetableRoutes';
 
 const app = express();
-app.use(bodyParser.json());
-
 const PORT = 3000;
+
+app.use(bodyParser.json());
+app.use('/api', timetableRoutes);
 
 app.listen(PORT);
