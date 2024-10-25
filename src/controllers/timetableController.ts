@@ -1,30 +1,18 @@
 import { Request, Response } from 'express';
 import { getDayTimetables } from '../services/timetableService';
-import { DayTimetable } from '../models/dayTimetable';
+import { handleError } from '../utils/errorHandler';
 
 export const TimeSlotController = {
   getTimeSlots: (req: Request, res: Response) => {
-    const {
-      start_day_identifier,
-      timezone_identifier,
-      service_duration,
-      days = 1,
-      timeslot_interval = 1800,
-    } = req.body;
-
     try {
-      const dayTimetables: DayTimetable[] = getDayTimetables(
-        start_day_identifier,
-        timezone_identifier,
-        service_duration,
-        days,
-        timeslot_interval,
-      );
-
+      const dayTimetables = getDayTimetables(req.body);
       res.status(200).json(dayTimetables);
-    } catch (error) {
-      console.error(error);
-      res.status(400).json({ message: '타임 슬롯 생성 중 오류 발생' });
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        res.status(400).json({ message: error.message });
+      } else {
+        handleError(res, error, '타임 슬롯 생성 중 오류 발생');
+      }
     }
   },
 };

@@ -7,7 +7,7 @@ dayjs.extend(timezone);
 
 export const isValidDateString = (dateString: string): boolean => {
   const date = dayjs(dateString, 'YYYYMMDD', true);
-  return date.isValid();
+  return date.isValid() && date.format('YYYYMMDD') === dateString;
 };
 
 export const convertToTimeZone = (unixTimestamp: number, timeZone: string): number => {
