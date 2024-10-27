@@ -28,31 +28,55 @@ export const isValidDays = (days: number): string | null => {
     : '유효하지 않은 일 수입니다.';
 };
 
+export const isValidBoolean = (value: any): string | null => {
+  return typeof value === 'boolean' ? null : '유효하지 않은 Boolean 값입니다.';
+};
+
+// 요청 본문을 검증하는 함수
 export const validateRequestBody = (body: RequestBody): string[] => {
-    const errors: string[] = [];
-    const { start_day_identifier, timezone_identifier, service_duration, days } = body;
-  
-    if (typeof start_day_identifier !== 'string' || !isValidDateString(start_day_identifier)) {
-      errors.push('유효하지 않은 날짜 형식입니다.');
+  const errors: string[] = [];
+  const { start_day_identifier, timezone_identifier, service_duration, days, is_ignore_schedule, is_ignore_workhour } = body;
+
+  // 날짜 형식 검증
+  if (typeof start_day_identifier !== 'string' || !isValidDateString(start_day_identifier)) {
+    errors.push('유효하지 않은 날짜 형식입니다.');
+  }
+
+  // 타임존 검증
+  const timezoneError = isValidTimeZone(timezone_identifier);
+  if (timezoneError) {
+    errors.push(timezoneError);
+  }
+
+  // 서비스 지속 시간 검증
+  const durationError = isValidServiceDuration(service_duration);
+  if (durationError) {
+    errors.push(durationError);
+  }
+
+  // 일 수 검증
+  if (days !== undefined) {
+    const daysError = isValidDays(days);
+    if (daysError) {
+      errors.push(daysError);
     }
-  
-    const timezoneError = isValidTimeZone(timezone_identifier);
-    if (timezoneError) {
-      errors.push(timezoneError);
+  }
+
+  // is_ignore_schedule 검증
+  if (is_ignore_schedule !== undefined) {
+    const ignoreScheduleError = isValidBoolean(is_ignore_schedule);
+    if (ignoreScheduleError) {
+      errors.push(ignoreScheduleError);
     }
-    
-    const durationError = isValidServiceDuration(service_duration);
-    if (durationError) {
-      errors.push(durationError);
+  }
+
+  // is_ignore_workhour 검증
+  if (is_ignore_workhour !== undefined) {
+    const ignoreWorkhourError = isValidBoolean(is_ignore_workhour);
+    if (ignoreWorkhourError) {
+      errors.push(ignoreWorkhourError);
     }
-    
-    if (days !== undefined) {
-      const daysError = isValidDays(days);
-      if (daysError) {
-        errors.push(daysError);
-      }
-    }
-  
-    return errors;
-  };
-  
+  }
+
+  return errors;
+};
