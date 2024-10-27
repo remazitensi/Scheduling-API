@@ -1,47 +1,81 @@
 import { DayTimetable, Timeslot } from '../models/dayTimetable';
 import { convertToTimeZone, generateAvailableTimeSlots } from '../utils/timeUtils';
-import dayjs from 'dayjs';
 import { validateRequestBody } from '../utils/validation';
 import { RequestBody } from '../interfaces/requestBody';
+import dayjs from 'dayjs';
+import events from '../data/events.json';
+import workhours from '../data/workhours.json';
+
+const doesOverlap = (slot: Timeslot, event: { begin_at: number; end_at: number }): boolean => {
+  const slotBegin = parseInt(slot.begin_at);
+  const slotEnd = parseInt(slot.end_at);
+  return slotBegin < event.end_at && slotEnd > event.begin_at;
+};
+
+const doesWorkhourOverlap = (slot: Timeslot, workhour: { open_interval: number; close_interval: number }): boolean => {
+  const slotBegin = parseInt(slot.begin_at);
+  const slotEnd = parseInt(slot.end_at);
+  return slotBegin < workhour.close_interval && slotEnd > workhour.open_interval;
+};
+
+const filterTimeslots = (timeslots: Timeslot[], body: RequestBody): Timeslot[] => {
+  // step 2: is_ignore_schedule가 false인 경우 이벤트 데이터와 겹치는 타임슬롯을 필터링
+  if (!body.is_ignore_schedule) {
+    timeslots = timeslots.filter(slot => 
+      !events.some(event => doesOverlap(slot, event))
+    );
+  }
+
+  // step 3: is_ignore_workhour가 false인 경우 근무시간 데이터와 겹치는 타임슬롯을 필터링
+  if (!body.is_ignore_workhour) {
+    timeslots = timeslots.filter(slot => 
+      !workhours.some(workhour => doesWorkhourOverlap(slot, workhour))
+    );
+  }
+
+  return timeslots;
+};
 
 export const getDayTimetables = (body: RequestBody): DayTimetable[] => {
-    const errors = validateRequestBody(body);
-    if (errors.length > 0) {
-      throw new Error(errors.join(', '));
-    }
-  
-    const {
-      start_day_identifier,
-      timezone_identifier,
-      service_duration,
-      days = 1,
-      timeslot_interval = 1800,
-    } = body;
+
+  const errors = validateRequestBody(body);
+  if (errors.length > 0) {
+    throw new Error(errors.join(', '));
+  }
+
+  const {
+    start_day_identifier,
+    timezone_identifier,
+    service_duration,
+    days = 1,
+    timeslot_interval = 1800,
+  } = body;
 
   const timetables: DayTimetable[] = [];
-  const startOfDayUnix = dayjs(start_day_identifier, 'YYYYMMDD').startOf('day').unix();
+  // step 1: 시작일을 Unix timestamp로 변환하여 UTC 기준으로 시작하는 timestamp 생성
+  const startOfDayUnix = dayjs.utc(start_day_identifier, 'YYYYMMDD').startOf('day').unix();
+
 
   for (let i = 0; i < days; i++) {
-    const currentDay = convertToTimeZone(startOfDayUnix + i * 86400, timezone_identifier);
-    const availableSlots = generateAvailableTimeSlots(currentDay, service_duration, timeslot_interval);
+
+    const currentDayUnix = startOfDayUnix + i * 86400;
+    const currentDay = convertToTimeZone(currentDayUnix, timezone_identifier);
+    const availableSlots = generateAvailableTimeSlots(currentDayUnix, service_duration, timeslot_interval);
 
     const timeslots: Timeslot[] = availableSlots.map(begin_at => ({
       begin_at: begin_at.toString(),
       end_at: (begin_at + service_duration).toString(),
     }));
 
+    const filteredTimeslots = filterTimeslots(timeslots, body);
+
     timetables.push({
       start_of_day: currentDay,
       day_modifier: i,
-      is_day_off: false, // Step 1: 주어진 파라미터에 따라 타임슬롯 반환
-      timeslots,
+      is_day_off: false,
+      timeslots: filteredTimeslots,
     });
   }
 
-  // TODO: Step 2 - is_ignore_schedule 처리 로직 구현
-  // 주어진 events.json 파일을 참조하여 Timeslot과 겹치지 않도록 필터링하는 기능 추가
-
-  // TODO: Step 3 - is_ignore_workhour 처리 로직 구현
-  // 주어진 workhours.json 파일을 참조하여 Timeslot과 겹치지 않도록 필터링하는 기능 추가
   return timetables;
 };
