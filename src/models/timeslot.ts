@@ -1,5 +1,4 @@
 export interface Timeslot {
-    begin_at: string;
-    end_at: string;
-  }
-  
+  begin_at: number;
+  end_at: number;
+}
