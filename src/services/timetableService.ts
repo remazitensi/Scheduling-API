@@ -23,6 +23,7 @@ const doesWorkhourOverlap = (slot: Timeslot, workhour: { open_interval: number; 
 };
 
 const filterTimeslots = (timeslots: Timeslot[], body: RequestBody, startOfDayUnix: number): Timeslot[] => {
+
   // step 2: is_ignore_schedule가 false인 경우 이벤트 데이터와 겹치는 타임슬롯을 필터링
   if (!body.is_ignore_schedule) {
     timeslots = timeslots.filter(slot => 
@@ -34,6 +35,7 @@ const filterTimeslots = (timeslots: Timeslot[], body: RequestBody, startOfDayUni
   if (!body.is_ignore_workhour) {
     timeslots = timeslots.filter(slot => 
       !workhours.some(workhour => doesWorkhourOverlap(slot, workhour, startOfDayUnix))
+
     );
   }
 
@@ -60,6 +62,7 @@ export const getDayTimetables = (body: RequestBody): DayTimetable[] => {
   const startOfDayUnix = dayjs.utc(start_day_identifier, 'YYYYMMDD').startOf('day').unix();
 
   for (let i = 0; i < days; i++) {
+
     const currentDayUnix = startOfDayUnix + i * 86400;
     const currentDay = convertToTimeZone(currentDayUnix, timezone_identifier);
     const availableSlots = generateAvailableTimeSlots(currentDayUnix, service_duration, timeslot_interval);
